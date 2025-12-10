@@ -1,0 +1,101 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: las-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: las_db
+      POSTGRES_USER: las_user
+      POSTGRES_PASSWORD: las_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - las-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U las_user -d las_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: las-qdrant
+    restart: unless-stopped
+    ports:
+      - "6334:6333"
+      - "6335:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - las-network
+
+  # LAS Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: las-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./:/app
+      - ./.screenshots:/app/.screenshots
+    command: python3 api.py
+    environment:
+      - BACKEND_PORT=8000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=las_db
+      - POSTGRES_USER=las_user
+      - POSTGRES_PASSWORD=las_password
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - LAS_API_KEY=${LAS_API_KEY:-las-secret-key}
+      - DOCKER_INTERNAL_URL=http://host.docker.internal
+      - WORK_DIR=/opt/workspace
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    networks:
+      - las-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+  # LAS Frontend (Next.js)
+  frontend:
+    build:
+      context: ../las_ui/las-ui-v2
+      dockerfile: Dockerfile
+    container_name: las-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    networks:
+      - las-network
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
+  qdrant-data:
+
+networks:
+  las-network:
+    driver: bridge

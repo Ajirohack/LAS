@@ -1,0 +1,23 @@
+# Privacy Cloak Browser - Requirements
+
+# Core dependencies
+requests>=2.31.0
+asyncio-mqtt>=0.16.0
+
+# Browser automation (to be integrated)
+# browser-use>=0.1.0
+# playwright>=1.40.0
+
+# Tor/network
+# stem>=1.8.0  # Tor controller for Python
+
+# Utilities
+user-agent>=0.1.10
+pytz>=2023.3
+
+# Optional VPN support
+# python-openvpn>=0.1.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0

@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+
+:root {
+  /* LAS "Zinc & Electric" Palette */
+  --background: #09090B;
+  /* Void Black */
+  --surface: rgba(24, 24, 27, 0.5);
+  /* Glass Zinc */
+  --foreground: #FAFAFA;
+  /* Text Main */
+  --foreground-muted: #A1A1AA;
+  /* Text Muted */
+
+  --primary: #3B82F6;
+  /* Electric Blue */
+  --accent: #A855F7;
+  /* Neon Purple */
+  --border: #27272A;
+  /* Zinc-800 */
+
+  --success: #10B981;
+  /* Emerald */
+  --error: #EF4444;
+  /* Red */
+
+  /* Glassmorphism */
+  --glass-blur: blur(12px);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Fonts */
+  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Monaco', 'Courier New', monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphic Utility Classes */
+.glass-panel {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-border {
+  border: 1px solid var(--glass-border);
+}
+
+/* Pulse Animation for "Thinking" States */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 8px var(--primary);
+  }
+
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 16px var(--primary);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Smooth Transitions */
+* {
+  transition: background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out;
+}

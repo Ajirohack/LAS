@@ -1,0 +1,83 @@
+groups:
+  - name: las_alerts
+    interval: 30s
+    rules:
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(las_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API response time (instance {{ $labels.instance }})"
+          description: "95th percentile response time is {{ $value }}s"
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(las_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate (instance {{ $labels.instance }})"
+          description: "Error rate is {{ $value }} errors/sec"
+
+      # Low Cache Hit Rate
+      - alert: LowCacheHitRate
+        expr: (redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}%"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage (instance {{ $labels.instance }})"
+          description: "Less than 10% memory available"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage (instance {{ $labels.instance }})"
+          description: "CPU usage is {{ $value }}%"
+
+      # Service Down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service down (instance {{ $labels.instance }})"
+          description: "{{ $labels.job }} is down"
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionIssues
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cannot connect to PostgreSQL"
+          description: "PostgreSQL is unreachable"
+
+      # High Request Rate
+      - alert: HighRequestRate
+        expr: rate(las_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "High request rate"
+          description: "Request rate is {{ $value }} req/s"

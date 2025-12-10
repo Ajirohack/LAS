@@ -1,0 +1,618 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useSpring } from 'framer-motion';
+import { Sun, Moon, ChevronDown, ExternalLink } from 'lucide-react';
+
+const App = () => {
+    const [darkMode, setDarkMode] = useState(false);
+    const [activeSection, setActiveSection] = useState('');
+    const [expandedSections, setExpandedSections] = useState({});
+
+    const { scrollYProgress } = useScroll();
+    const scaleX = useSpring(scrollYProgress, {
+        stiffness: 100,
+        damping: 30,
+        restDelta: 0.001
+    });
+
+    // Citation system
+    useEffect(() => {
+        document.querySelectorAll('[data-ref]').forEach(el => {
+            if (el.dataset.citationProcessed) return;
+
+            const refData = el.getAttribute('data-ref');
+            if (!refData?.trim()) return;
+
+            const separatorIndex = refData.indexOf('|');
+            if (separatorIndex === -1) return;
+
+            const url = refData.substring(0, separatorIndex).trim();
+            const indexNum = refData.substring(separatorIndex + 1).trim();
+
+            if (!el.textContent?.trim()) return;
+
+            const btn = document.createElement('sup');
+            btn.textContent = String(indexNum);
+
+            Object.assign(btn.style, {
+                fontSize: '8px', top: '1%', color: '#fff', cursor: 'pointer', fontWeight: 'bold',
+                backgroundColor: '#0284c7', borderRadius: '50%', transition: 'all .2s',
+                userSelect: 'none', minWidth: '18px', height: '18px', marginLeft: '2px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 1px 3px rgba(0,0,0,.2)', fontFamily: 'system-ui,-apple-system,sans-serif',
+                lineHeight: '1', verticalAlign: 'baseline', padding: '0 2px'
+            });
+
+            btn.onmouseenter = () => Object.assign(btn.style, { backgroundColor: '#0369a1', transform: 'scale(1.15)', boxShadow: '0 2px 6px rgba(0,0,0,.3)' });
+            btn.onmouseleave = () => Object.assign(btn.style, { backgroundColor: '#0284c7', transform: 'scale(1)', boxShadow: '0 1px 3px rgba(0,0,0,.2)' });
+            btn.onclick = e => { e.stopPropagation(); e.preventDefault(); window.open(url, '_blank'); };
+
+            el.appendChild(btn);
+
+            el.dataset.citationProcessed = 'true';
+        });
+    }, []);
+
+    const toggleDarkMode = () => {
+        setDarkMode(!darkMode);
+    };
+
+    const toggleSection = (sectionId) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionId]: !prev[sectionId]
+        }));
+    };
+
+    const sections = [
+        { id: 'introduction', title: 'Introduction' },
+        { id: 'technical-overview', title: 'Technical Overview' },
+        { id: 'fingerprinting', title: 'Browser Fingerprinting' },
+        { id: 'canvas-webgl', title: 'Canvas & WebGL Fingerprinting' },
+        { id: 'location-spoofing', title: 'Location Spoofing' },
+        { id: 'existing-solutions', title: 'Existing Solutions' },
+        { id: 'challenges', title: 'Challenges & Limitations' },
+        { id: 'conclusion', title: 'Conclusion' }
+    ];
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollPosition = window.scrollY + 100;
+
+            for (let i = sections.length - 1; i >= 0; i--) {
+                const element = document.getElementById(sections[i].id);
+                if (element && element.offsetTop <= scrollPosition) {
+                    setActiveSection(sections[i].id);
+                    break;
+                }
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToSection = (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    return (
+        <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+            {/* Progress bar */}
+            <motion.div
+                className="fixed top-0 left-0 right-0 h-1 bg-blue-500 transform-origin-left z-50"
+                style={{ scaleX }}
+            />
+
+            {/* Floating Header */}
+            <header className={`fixed top-0 left-0 right-0 z-40 backdrop-blur-md transition-all duration-300 ${darkMode ? 'bg-gray-900/80 border-b border-gray-700' : 'bg-white/80 border-b border-gray-200'
+                }`}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center py-4">
+                        <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Privacy-Focused Social Media Browser Research
+                        </h1>
+                        <div className="flex items-center space-x-4">
+                            <nav className="hidden md:flex space-x-4">
+                                {sections.map((section) => (
+                                    <button
+                                        key={section.id}
+                                        onClick={() => scrollToSection(section.id)}
+                                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeSection === section.id
+                                                ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'
+                                                : darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
+                                            }`}
+                                    >
+                                        {section.title}
+                                    </button>
+                                ))}
+                            </nav>
+                            <button
+                                onClick={toggleDarkMode}
+                                className={`p-2 rounded-full transition-colors ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'
+                                    }`}
+                            >
+                                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {/* Mobile Navigation */}
+            <div className="md:hidden fixed top-16 left-0 right-0 z-30 backdrop-blur-md p-4 bg-opacity-80 border-b ${
+        darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+      }">
+                <select
+                    value={activeSection}
+                    onChange={(e) => scrollToSection(e.target.value)}
+                    className={`w-full p-2 rounded-md border ${darkMode
+                            ? 'bg-gray-800 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                >
+                    {sections.map((section) => (
+                        <option key={section.id} value={section.id}>
+                            {section.title}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Main Content */}
+            <main className="pt-24 pb-16">
+                {/* Introduction Section */}
+                <section id="introduction" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                        >
+                            <h1 className={`text-4xl md:text-5xl font-bold mb-8 text-center ${darkMode ? 'text-white' : 'text-gray-900'
+                                }`}>
+                                Technical Feasibility of Privacy-Focused Social Media Browser
+                            </h1>
+
+                            <img
+                                src="https://cdn.qwenlm.ai/wV10g69398fae7d9b7f22000ffcf065a2/b7f5b742-1d0a-4d0a-9c83-074e85dbd652/891c9560-c246-4668-b746-793f43880356.png?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXNvdXJjZV91c2VyX2lkIjoid1YxMGc2OTM5OGZhZTdkOWI3ZjIyMDAwZmZjZjA2NWEyIiwicmVzb3VyY2VfaWQiOiJiN2Y1Yjc0Mi0xZDBhLTRkMGEtOWM4My0wNzRlODVkYmQ2NTIiLCJyZXNvdXJjZV9jaGF0X2lkIjpudWxsfQ.5lvRNyHnxsjx9pWZnq6hw9_oQ6JDiHVp70WDbnV6IVI"
+                                alt="A sophisticated digital illustration showing interconnected browser windows with various privacy protection elements. The image displays multiple browser tabs with lock icons, shield symbols, and globe icons representing global connectivity. Abstract data streams flow between the windows with encrypted tunnel representations, and geographic markers indicate worldwide proxy locations. The color scheme features deep blues (#1e40af) and greens (#059669) representing security, with accent colors in orange (#ea580c) for warning/detection elements. The background has a subtle grid pattern suggesting network connectivity with floating geometric shapes representing data packets. The overall aesthetic is modern and technical, emphasizing privacy protection and global accessibility without any text overlays."
+                                className="w-full rounded-xl shadow-lg mb-8"
+                                data-ref="https://soax.com/blog/prevent-browser-fingerprinting|15"
+                            />
+
+                            <p className={`text-lg leading-relaxed mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                data-ref="https://soax.com/blog/prevent-browser-fingerprinting|15">
+                                This research explores the technical feasibility and architectural design of a specialized privacy browser engineered to circumvent Meta's account restriction mechanisms. The focus includes evaluating how such a browser could control or obfuscate transmitted data—including network details, device fingerprints, and geolocation—while integrating secure private networking layers like RDP or SOCKS5 proxies.
+                            </p>
+
+                            <div className={`bg-gradient-to-r ${darkMode ? 'from-gray-800 to-gray-700' : 'from-blue-50 to-indigo-50'
+                                } p-6 rounded-xl mb-6`}>
+                                <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    Key Research Areas
+                                </h3>
+                                <ul className={`space-y-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    <li className="flex items-start">
+                                        <span className="text-blue-500 mr-2">•</span>
+                                        Advanced geo-location and IP spoofing techniques
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="text-blue-500 mr-2">•</span>
+                                        Device fingerprint control and obfuscation
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="text-blue-500 mr-2">•</span>
+                                        Integration of private tunneling protocols
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="text-blue-500 mr-2">•</span>
+                                        Comparative analysis of existing privacy browsers
+                                    </li>
+                                </ul>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Technical Overview Section */}
+                <section id="technical-overview" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.1 }}
+                        >
+                            <h2 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Technical Overview
+                            </h2>
+
+                            <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                                }`}>
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://www.browsercat.com/post/browser-fingerprint-spoofing-explained|8">
+                                    Browser fingerprinting combines hundreds of attributes including User-Agent string, Accept headers, IP address, timezone (e.g., GMT+2), screen resolution and color depth, platform/OS details, browser plugins/extensions, installed fonts, Canvas/WebGL rendering behavior, audio stack characteristics, media device enumeration, CSS support differences, and TLS handshake patterns (JA3 fingerprint) to create a unique digital 'barcode' for device identification.
+                                </p>
+
+                                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://multilogin.com/blog/browser-fingerprinting-the-surveillance-you-can-t-stop/|54">
+                                    Browser fingerprinting in 2025 relies on 12 core techniques: (1) User-Agent string (browser/version/OS/device), (2) screen resolution & display properties, (3) Canvas fingerprinting, (4) WebGL fingerprinting, (5) Audio fingerprinting, (6) Font fingerprinting, (7) Plugin/extension fingerprinting, (8) JavaScript Navigator properties, (9) Timezone & geolocation, (10) SSL/TLS fingerprinting, (11) Behavioral fingerprinting, and (12) Hardware fingerprinting. Combined, these generate 50–200 data points per session, hashed into a unique identifier with 99%+ accuracy.
+                                </p>
+                            </div>
+
+                            <div className={`grid md:grid-cols-2 gap-6 mb-8`}>
+                                <div className={`p-6 rounded-xl ${darkMode ? 'bg-blue-900/20 border border-blue-700' : 'bg-blue-50 border border-blue-200'
+                                    }`}>
+                                    <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                                        Core Components
+                                    </h3>
+                                    <ul className={`space-y-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        <li className="flex items-start">
+                                            <span className="text-blue-500 mr-2">•</span>
+                                            IP Address Spoofing
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-blue-500 mr-2">•</span>
+                                            Device Fingerprint Control
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-blue-500 mr-2">•</span>
+                                            Network Information Management
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-blue-500 mr-2">•</span>
+                                            Private Tunneling Protocols
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div className={`p-6 rounded-xl ${darkMode ? 'bg-green-900/20 border border-green-700' : 'bg-green-50 border border-green-200'
+                                    }`}>
+                                    <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>
+                                        Target Platforms
+                                    </h3>
+                                    <ul className={`space-y-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        <li className="flex items-start">
+                                            <span className="text-green-500 mr-2">•</span>
+                                            Facebook
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-green-500 mr-2">•</span>
+                                            Instagram
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-green-500 mr-2">•</span>
+                                            Threads
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="text-green-500 mr-2">•</span>
+                                            WhatsApp
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Browser Fingerprinting Section */}
+                <section id="fingerprinting" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.2 }}
+                        >
+                            <h2 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Browser Fingerprinting Techniques
+                            </h2>
+
+                            <img
+                                src="https://cdn.qwenlm.ai/wV10g69398fae7d9b7f22000ffcf065a2/b7f5b742-1d0a-4d0a-9c83-074e85dbd652/154c1bb8-fd0f-4bb2-a1ba-408d1e8be8c4.png?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXNvdXJjZV91c2VyX2lkIjoid1YxMGc2OTM5OGZhZTdkOWI3ZjIyMDAwZmZjZjA2NWEyIiwicmVzb3VyY2VfaWQiOiJiN2Y1Yjc0Mi0xZDBhLTRkMGEtOWM4My0wNzRlODVkYmQ2NTIiLCJyZXNvdXJjZV9jaGF0X2lkIjpudWxsfQ.5lvRNyHnxsjx9pWZnq6hw9_oQ6JDiHVp70WDbnV6IVI"
+                                alt="A detailed technical diagram showing various browser fingerprinting vectors. The image displays a central browser window with radiating lines pointing to different identification methods: canvas rendering outputs, WebGL graphics capabilities, audio context signatures, font enumeration results, and network characteristics. Each vector is represented by abstract geometric shapes with different colors - blue for canvas, green for WebGL, orange for audio, purple for fonts, and red for network data. The background features a subtle network topology pattern with data flow arrows indicating how these vectors combine to create a unique fingerprint. The overall aesthetic is clean and technical with clear visual separation between different fingerprinting categories."
+                                className="w-full rounded-xl shadow-lg mb-8"
+                                data-ref="https://substack.thewebscraping.club/p/browser-fingerprinting-how-it-works|5"
+                            />
+
+                            <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                                }`}>
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://substack.thewebscraping.club/p/browser-fingerprinting-how-it-works|5">
+                                    Browser fingerprinting is a stateless identification method collecting device/browser attributes (OS, browser version, language, screen size, installed fonts, canvas/WebGL/audio rendering outputs, navigator.hardwareConcurrency, navigator.deviceMemory, navigator.languages, Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.plugins, MediaDevices.enumerateDevices, navigator.webdriver flag) via public APIs and HTTP headers; unlike cookies, it persists across sessions and clears because it relies on configuration entropy rather than stored identifiers.
+                                </p>
+
+                                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://substack.thewebscraping.club/p/browser-fingerprinting-how-it-works|5">
+                                    Modern anti-bot systems use multi-layered fingerprint consistency checks to detect automation: e.g., mismatch between User-Agent string ('Chrome on Windows') and WebGL renderer string ('SwiftShader' indicating headless emulation), or zero audio/video devices (a server red flag), or inconsistent canvas/WebGL hashes across sessions.
+                                </p>
+                            </div>
+
+                            <div className={`mb-6 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-xl shadow-lg`}>
+                                <button
+                                    onClick={() => toggleSection('fingerprint-details')}
+                                    className={`w-full text-left flex justify-between items-center p-4 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                                        } transition-colors`}
+                                >
+                                    <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        Fingerprint Consistency Challenges
+                                    </h3>
+                                    <ChevronDown
+                                        className={`transition-transform ${expandedSections['fingerprint-details'] ? 'rotate-180' : ''
+                                            } ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                                        size={20}
+                                    />
+                                </button>
+
+                                {expandedSections['fingerprint-details'] && (
+                                    <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'
+                                        }`}>
+                                        <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                            data-ref="https://www.browsercat.com/post/browser-fingerprint-spoofing-explained|8">
+                                            Effective spoofing requires cross-layer consistency: User-Agent must align with navigator.platform, navigator.language, navigator.plugins, screen dimensions, WebGL vendor/renderer (e.g., 'Intel Inc.'/'Intel Iris OpenGL Engine'), hardwareConcurrency (e.g., 4 cores), deviceMemory (e.g., 8GB), timezone offset, and Intl.DateTimeFormat().resolvedOptions().timeZone; inconsistencies (e.g., 'Safari on Windows' UA with Linux platform) make fingerprints more detectable than unspoofed ones.
+                                        </p>
+
+                                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                            data-ref="https://multilogin.com/blog/how-to-spoof-browser-fingerprint/|14">
+                                            Browser fingerprinting collects over 50 data points including hardware (GPU model, CPU cores, RAM), software (OS, browser version, installed fonts), graphics (screen resolution, color depth, Canvas/WebGL rendering), network (IP address, WebRTC leaks, timezone), and behavior (mouse movements, typing speed); a landmark EFF study found 83.6% of browsers have unique fingerprints, rising to over 99% with modern techniques.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Canvas & WebGL Section */}
+                <section id="canvas-webgl" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.3 }}
+                        >
+                            <h2 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Canvas & WebGL Fingerprinting
+                            </h2>
+
+                            <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-red-900/20 border border-red-700' : 'bg-red-50 border border-red-200'
+                                }`}>
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://multilogin.com/blog/the-great-myth-of-canvas-fingerprinting/|9">
+                                    Canvas fingerprinting exploits hardware/software rendering variations (GPU model, drivers, OS, browser version, font rendering, anti-aliasing, hardware acceleration) to generate a persistent, unique hash from HTML5 Canvas API pixel data; it is undetectable by clearing cookies or changing IP, and is used by Facebook, Instagram, and other social media platforms to detect multi-account operation and ban evasion; combined with WebGL fingerprinting, it achieves 99.2% user identification accuracy.
+                                </p>
+
+                                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://multilogin.com/blog/the-great-myth-of-canvas-fingerprinting/|9">
+                                    Effective protection requires natural, stable, and cross-layer consistent fingerprints—not blocking or randomization—where canvas output must plausibly match reported GPU, OS, fonts, and WebGL capabilities; inconsistent spoofing (e.g., Intel GPU producing NVIDIA-like canvas output) triggers Meta's plausibility checks.
+                                </p>
+                            </div>
+
+                            <div className={`grid md:grid-cols-2 gap-6 mb-8`}>
+                                <div className={`p-6 rounded-xl ${darkMode ? 'bg-purple-900/20 border border-purple-700' : 'bg-purple-50 border border-purple-200'
+                                    }`}>
+                                    <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-purple-300' : 'text-purple-800'}`}>
+                                        Canvas Fingerprinting
+                                    </h3>
+                                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                        data-ref="https://blog.castle.io/canvas-fingerprinting-in-the-wild/|11">
+                                        Canvas fingerprinting leverages the HTML5 Canvas API to draw invisible 2D shapes and text with varying sizes, colors, fonts, and compositing operations; uniqueness and stability arise from subtle rendering differences across OS (e.g., macOS vs Linux), GPU, installed fonts, and browser engine.
+                                    </p>
+                                </div>
+
+                                <div className={`p-6 rounded-xl ${darkMode ? 'bg-orange-900/20 border border-orange-700' : 'bg-orange-50 border border-orange-200'
+                                    }`}>
+                                    <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-orange-300' : 'text-orange-800'}`}>
+                                        WebGL Fingerprinting
+                                    </h3>
+                                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                        data-ref="https://coronium.io/blog/browser-fingerprint-detection-guide|25">
+                                        WebGL fingerprinting achieves ≥98% accuracy in 2025 by leveraging GPU-specific shader compilation, rendering precision, and extension support; it is classified as 'Very High' difficulty to block and serves as a primary hardware identifier.
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Location Spoofing Section */}
+                <section id="location-spoofing" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.4 }}
+                        >
+                            <h2 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Location Spoofing Technologies
+                            </h2>
+
+                            <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-indigo-900/20 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200'
+                                }`}>
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://bureau.id/resources/blog/detect-location-gps-spoofing|27">
+                                    Location spoofing encompasses GPS spoofing (tampering with GPS signals), IP masking via VPNs/proxies, Wi-Fi/cell tower spoofing, and remote desktop usage (e.g., TeamViewer, AnyDesk) to control devices in target locations; these are all active, widely deployed methods for bypassing geo-restrictions and security checks across industries including banking, gaming, streaming, and ride-hailing.
+                                </p>
+
+                                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://litport.net/blog/proxy-geolocation-testing-strategies-tools-and-best-practices-for-location-based-testing-58180|26">
+                                    Mobile proxies offer 'very high' geolocation accuracy by utilizing actual mobile network IPs—providing authentic IP signatures and network characteristics that better evade detection compared to data center proxies; residential proxies also achieve 'high' accuracy and are recommended for content verification and e-commerce testing.
+                                </p>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Existing Solutions Section */}
+                <section id="existing-solutions" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.5 }}
+                        >
+                            <h2 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Existing Privacy Browser Solutions
+                            </h2>
+
+                            <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                                }`}>
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://www.reddit.com/r/browsers/comments/10x6hsg/whats_the_difference_between_antidetect_browsers/|71">
+                                    Anti-detect browsers (e.g., Dolphin-Anty, Multilogin, GoLogin) are designed to create and maintain entirely new, consistent digital identities—including spoofed device fingerprints, network characteristics, geolocation signals, and browser attributes—specifically engineered to evade high-level tracking systems like those used by Meta and Google.
+                                </p>
+
+                                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://www.reddit.com/r/browsers/comments/10x6hsg/whats_the_difference_between_antidetect_browsers/|71">
+                                    Hardened privacy browsers (e.g., Brave, Hardened Firefox) focus on suppressing or limiting leakage of the user's *real* identity (e.g., via tracker blocking, fingerprint reduction, container isolation) but cannot replace or forge a new identity; they are fundamentally not built for multi-accounting or detection evasion at Meta's scale.
+                                </p>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-6 mb-8">
+                                <div className={`p-6 rounded-xl ${darkMode ? 'bg-blue-900/20 border border-blue-700' : 'bg-blue-50 border border-blue-200'
+                                    }`}>
+                                    <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                                        Multilogin
+                                    </h3>
+                                    <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                        data-ref="https://www.joinmassive.com/blog/best-anti-detect-browsers|52">
+                                        Offers dual browser engines (Mimic and Stealthfox), built-in residential proxy network covering 150+ countries with 30+ million IPs and 95% clean IP record, 25+ configurable fingerprint parameters, daily testing on 50+ major platforms, and 90%+ success rates on sophisticated platforms like Facebook and Instagram.
+                                    </p>
+                                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                        data-ref="https://multilogin.com/blog/browser-privacy-tools-why-are-they-essential-for-marketers/|66">
+                                        Provides 55+ adjustable fingerprint parameters per profile to ensure each browser environment appears realistic and isolated, preventing cross-account detection on platforms like Facebook and Instagram.
+                                    </p>
+                                </div>
+
+                                <div className={`p-6 rounded-xl ${darkMode ? 'bg-green-900/20 border border-green-700' : 'bg-green-50 border border-green-200'
+                                    }`}>
+                                    <h3 className={`text-xl font-semibold mb-3 ${darkMode ? 'text-green-300' : 'text-green-800'}`}>
+                                        Kameleo
+                                    </h3>
+                                    <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                        data-ref="https://kameleo.io/|50">
+                                        An anti-detect browser offering advanced fingerprint masking technologies including mobile profiles and intelligent canvas spoofing, designed to protect accounts on platforms like Facebook, eBay, Google, and TikTok and avoid detection during multi-accounting and web scraping.
+                                    </p>
+                                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                        data-ref="https://developer.kameleo.io/concepts/fingerprints/|49">
+                                        Constructs virtual browser profiles using real-device telemetry—user agent (with build/patch numbers), OS/platform (e.g., Windows 11 64-bit, macOS 14, Android 14), device memory tiers, logical processor count buckets, WebGL vendor/renderer pairs, ensuring all values are naturally aligned rather than randomly mixed.
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Challenges Section */}
+                <section id="challenges" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.6 }}
+                        >
+                            <h2 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Technical Challenges & Limitations
+                            </h2>
+
+                            <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-red-900/20 border border-red-700' : 'bg-red-50 border border-red-200'
+                                }`}>
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://news.ycombinator.com/item?id=32899846|31">
+                                    Manifest V2 deprecation: New MV2 extensions banned from Chrome Web Store since January 2024; existing MV2 extensions will stop running entirely in Chrome by June 2023 even with enterprise policy enabled. Chrome's MV3 blocks reliable proxy authentication automation: The onAuthRequired API is broken or deprecated, forcing users to manually re-enter credentials per proxy server—undermining rapid geo-location/IP spoofing workflows required for global Meta account evasion.
+                                </p>
+
+                                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://binaryfolks.com/blog/chrome-extension-manifest-v3-migration/|33">
+                                    Manifest V3 deprecates the 'webRequest' API (which allowed real-time interception and modification of network requests) in favor of the rule-based 'declarativeNetRequest' API, limiting extensions to predefined, static blocking/redirection rules; this severely restricts dynamic IP spoofing, RDP/SOCKS5 tunneling integration, and runtime geolocation/device fingerprint manipulation required to evade Meta's account detection systems.
+                                </p>
+                            </div>
+
+                            <div className={`mb-6 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-xl shadow-lg`}>
+                                <button
+                                    onClick={() => toggleSection('challenge-details')}
+                                    className={`w-full text-left flex justify-between items-center p-4 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                                        } transition-colors`}
+                                >
+                                    <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        Additional Technical Limitations
+                                    </h3>
+                                    <ChevronDown
+                                        className={`transition-transform ${expandedSections['challenge-details'] ? 'rotate-180' : ''
+                                            } ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                                        size={20}
+                                    />
+                                </button>
+
+                                {expandedSections['challenge-details'] && (
+                                    <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'
+                                        }`}>
+                                        <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                            data-ref="https://www.pyproxy.com/information/common-limitations-of-chrome-with-socks5-proxy-and-how-to-avoid-them.html|32">
+                                            DNS leaks occur in Chrome with SOCKS5 proxies because Chrome uses the system's DNS resolver by default, sending DNS queries outside the proxy tunnel and exposing the user's real IP address; mitigation requires configuring a SOCKS5-compatible DNS resolver or custom DNS server to route DNS queries through the same proxy connection.
+                                        </p>
+
+                                        <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                            data-ref="https://www.pyproxy.com/information/common-limitations-of-chrome-with-socks5-proxy-and-how-to-avoid-them.html|32">
+                                            WebRTC bypasses SOCKS5 proxies entirely in Chrome, leaking the user's real local and public IP addresses during peer-to-peer sessions (e.g., video calls); disabling WebRTC via Chrome's advanced settings or dedicated extensions is a recommended mitigation, albeit at the cost of breaking real-time communication features.
+                                        </p>
+
+                                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                            data-ref="https://www.linkedin.com/posts/cyberstreams_%3F%3F%3F%3F%3F-%3F%3F%3F%3F-%3F%3F%3F%3F-%3F%3F%3F%3F%3F%3F-activity-7359275434137563137-EDUK|21">
+                                            Meta's Facebook and Instagram apps on mobile devices open hidden 'peep-holes' to spy on websites visited via browsers, using Meta's tracking code embedded on over 5.8 million websites as of 2025; this links browsing activity (e.g., shopping, news reading, health queries) to users' social media profiles even when using private browsing mode or VPNs, subverting all browser-level privacy controls.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Conclusion Section */}
+                <section id="conclusion" className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.7 }}
+                        >
+                            <h2 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Conclusion & Future Outlook
+                            </h2>
+
+                            <div className={`mb-8 p-6 rounded-xl ${darkMode ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200'
+                                }`}>
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://soax.com/blog/prevent-browser-fingerprinting|15">
+                                    The technical feasibility of a globally applicable privacy-focused social media browser capable of evading Meta's account detection systems exists but faces significant challenges. Modern detection systems use multi-layered approaches combining browser fingerprinting, geolocation consistency checks, and behavioral analysis that require sophisticated countermeasures.
+                                </p>
+
+                                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://soax.com/blog/bypass-waf-web-scraping|46">
+                                    Effective WAF bypass strategies include: residential/mobile/IPSP-grade IP rotation with geo-targeting and session persistence, advanced header management with randomized order/casing and User-Agent–consistent headers, browser fingerprint spoofing via Puppeteer-extra-stealth or patched Chromium, and full JavaScript execution + DOM validation via Playwright/Selenium—all of which are directly transferable to evading Meta's account detection stack.
+                                </p>
+
+                                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                                    data-ref="https://decodo.com/blog/how-to-bypass-google-captcha|45">
+                                    Over 50% of iOS device requests now use Private Access Tokens (PATs)—cryptographic proofs of device legitimacy—signaling a shift toward hardware-level authentication where device trustworthiness and behavioral plausibility outweigh IP masking alone; this implies that evading Meta's detection requires cross-layer consistency across device fingerprint (canvas/WebGL/audio), network stack (TLS/HTTP headers/IP ASN), and geolocation (GPS/WiFi/IP) to pass plausibility checks, not just isolated spoofing.
+                                </p>
+                            </div>
+
+                            <div className={`text-center mt-8 ${darkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
+                                <p className="text-sm">
+                                    This research provides a comprehensive analysis of the technical landscape for privacy-focused social media browsing solutions.
+                                </p>
+                                <p className="text-xs mt-2">
+                                    All information sourced from provided research materials with proper citations.
+                                </p>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    );
+};
+
+export default App;

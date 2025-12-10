@@ -1,0 +1,24 @@
+{
+  "name": "@repo/examples",
+  "description": "Examples for the repo.",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.tsx"
+  },
+  "dependencies": {
+    "@icons-pack/react-simple-icons": "^13.8.0",
+    "@repo/elements": "workspace:*",
+    "@xyflow/react": "^12.9.2",
+    "ai": "^5.0.89",
+    "lucide-react": "^0.552.0",
+    "nanoid": "^5.1.6",
+    "react": "19.2.0",
+    "sonner": "^2.0.7"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "19.2.2",
+    "typescript": "^5.9.3"
+  }
+}

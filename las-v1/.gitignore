@@ -1,0 +1,74 @@
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+!las_core/frontend/las-ui-v2/lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv
+venv/
+ENV/
+env/
+exvenv/
+status.json
+celerybeat-schedule
+celerybeat.pid
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Docker
+docker-compose.override.yml
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+las_core/qdrant_data/
+las_core/postgres_data/
+las_core/.screenshots/
+las_core/llm_router/
+
+# Large AI models
+*.onnx
+*.bin
+*.safetensors
+*.pt
+*.pth

@@ -1,0 +1,22 @@
+{
+  "name": "test_coding_workflow",
+  "description": "Example coding workflow",
+  "workflow_steps": [
+    {
+      "role": "planner",
+      "content": "Analyzed requirements"
+    },
+    {
+      "role": "coder",
+      "content": "Implemented solution"
+    }
+  ],
+  "success_conditions": [
+    "Code runs successfully"
+  ],
+  "metadata": {
+    "language": "python"
+  },
+  "created_at": "2025-11-24 02:02:19.528448",
+  "usage_count": 0
+}
