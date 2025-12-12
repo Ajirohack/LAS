@@ -2,18 +2,14 @@
 Database Models for LAS.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, create_engine, Index
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import relationship
 from datetime import datetime
-import os
 
 Base = declarative_base()
 
-# Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./las.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Database setup is provided by services.db.postgres
 
 class User(Base):
     """User model for authentication."""
@@ -102,16 +98,4 @@ class TokenData(BaseModel):
     user_id: Optional[int] = None
     role: Optional[str] = None
 
-# Database session dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Create tables
-def init_db():
-    """Initialize database tables."""
-    Base.metadata.create_all(bind=engine)
-    print("✓ Database tables created successfully")
+# Initialization handled in services.db.postgres.init_db

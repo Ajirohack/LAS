@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     qdrant_host: str = Field("localhost", alias="QDRANT_HOST")
     qdrant_port: int = Field(6333, alias="QDRANT_PORT")
 
+    # SearxNG Config
+    searxng_base_url: str = Field("http://127.0.0.1:8080", alias="SEARXNG_BASE_URL")
+
     # OpenRouter Config
     app_url: str = Field("https://github.com/your-repo/las", alias="APP_URL")
     app_name: str = Field("Local Agent System", alias="APP_NAME")

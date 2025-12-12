@@ -22,7 +22,14 @@ sleep 3
 
 # Start frontend server
 echo "🎨 Starting frontend server on port 3000..."
-cd "$(dirname "$0")/las_core/frontend/las-ui-v2"
+FRONTEND_DIR="$(dirname "$0")/las_ui/las-ui-v3"
+if [ ! -d "$FRONTEND_DIR" ]; then
+  FRONTEND_DIR="$(dirname "$0")/las_ui/las-ui-v2(depreciated).old"
+fi
+cd "$FRONTEND_DIR"
+if [ ! -d "node_modules" ]; then
+  npm install
+fi
 npm run dev &
 FRONTEND_PID=$!
 echo "Frontend PID: $FRONTEND_PID"

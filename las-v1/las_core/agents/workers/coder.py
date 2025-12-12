@@ -1,10 +1,11 @@
 from langchain_core.messages import HumanMessage
+from services.llm_service import get_llm_service
 from config.settings import settings
-from langchain_community.chat_models import ChatOllama
 
 class CoderAgent:
     def __init__(self):
-        self.llm = ChatOllama(model=settings.provider_model, base_url=settings.provider_server_address)
+        self.llm_service = get_llm_service()
+        self.llm = self.llm_service.get_langchain_llm()
 
     def run(self, state):
         messages = state["messages"]

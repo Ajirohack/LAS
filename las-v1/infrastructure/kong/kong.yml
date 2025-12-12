@@ -1,0 +1,141 @@
+_format_version: "3.0"
+_transform: true
+
+# ============================================================
+# Kong API Gateway Configuration for LAS
+# ============================================================
+#
+# Route Map:
+#   /api/*        -> LAS Backend (port 7777)
+#   /ws/*         -> LAS Backend WebSocket
+#   /litellm/*    -> LiteLLM endpoints
+#
+# Access Gateway at: http://localhost:8000
+# Admin API at: http://localhost:8001
+
+services:
+  # LAS Backend API
+  - name: las-backend-api
+    url: http://las-backend:7777
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    routes:
+      # Main API routes
+      - name: las-api-route
+        paths:
+          - /api
+        strip_path: false
+        preserve_host: true
+        protocols:
+          - http
+          - https
+
+      # LiteLLM routes
+      - name: las-litellm-route
+        paths:
+          - /litellm
+        strip_path: false
+        preserve_host: true
+        protocols:
+          - http
+          - https
+
+      # Streaming routes (SSE)
+      - name: las-stream-route
+        paths:
+          - /stream
+        strip_path: false
+        preserve_host: true
+        protocols:
+          - http
+          - https
+
+      # Health check
+      - name: las-health-route
+        paths:
+          - /health
+        strip_path: false
+        protocols:
+          - http
+          - https
+
+plugins:
+  # Global CORS configuration
+  - name: cors
+    config:
+      origins:
+        - "http://localhost:3000"
+        - "http://localhost:8080"
+        - "http://127.0.0.1:3000"
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Encoding
+        - Accept-Language
+        - Authorization
+        - Content-Type
+        - Origin
+        - X-Requested-With
+        - X-API-Key
+      exposed_headers:
+        - X-Auth-Token
+        - X-Request-Id
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+  # Rate limiting
+  - name: rate-limiting
+    config:
+      minute: 100
+      hour: 1000
+      policy: local
+      fault_tolerant: true
+      hide_client_headers: false
+      redis_timeout: 2000
+
+  # Response transformer for consistent headers
+  - name: response-transformer
+    config:
+      add:
+        headers:
+          - "X-Powered-By:LAS"
+          - "X-Gateway:Kong"
+
+  # Request size limit
+  - name: request-size-limiting
+    config:
+      allowed_payload_size: 50
+      size_unit: megabytes
+      require_content_length: false
+
+  # Logging
+  - name: file-log
+    config:
+      path: /tmp/kong-access.log
+      reopen: true
+
+# Upstreams for load balancing (if multiple backend instances)
+upstreams:
+  - name: las-backend-upstream
+    algorithm: round-robin
+    healthchecks:
+      active:
+        healthy:
+          interval: 5
+          successes: 2
+        unhealthy:
+          http_failures: 3
+          interval: 5
+    targets:
+      - target: las-backend:7777
+        weight: 100

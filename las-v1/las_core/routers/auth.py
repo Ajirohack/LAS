@@ -4,13 +4,14 @@ Authentication Router - Login, register, logout endpoints.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_, delete
 from datetime import datetime, timedelta
 
 from database.models import (
     User, UserSession, UserCreate, UserResponse, TokenResponse,
-    get_db
 )
+from services.db.postgres import get_db
 from services.auth_service import get_auth_service
 from middleware.auth_middleware import require_auth
 
@@ -18,15 +19,18 @@ router = APIRouter()
 security = HTTPBearer()
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user."""
     auth_service = get_auth_service()
     
     try:
         # Check if user exists
-        existing = db.query(User).filter(
-            (User.username == user_data.username) | (User.email == user_data.email)
-        ).first()
+        result = await db.execute(
+            select(User).where(
+                or_(User.username == user_data.username, User.email == user_data.email)
+            )
+        )
+        existing = result.scalar_one_or_none()
         
         if existing:
             raise HTTPException(
@@ -51,13 +55,13 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         )
         
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
         
         return user
     
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -68,13 +72,14 @@ async def login(
     username: str,
     password: str,
     request: Request,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Login and receive JWT tokens."""
     auth_service = get_auth_service()
     
     # Authenticate user
-    user = db.query(User).filter(User.username == username).first()
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalar_one_or_none()
     
     if not user or not user.is_active:
         raise HTTPException(
@@ -111,7 +116,7 @@ async def login(
     
     # Update last login
     user.last_login = datetime.utcnow()
-    db.commit()
+    await db.commit()
     
     return {
         "access_token": access_token,
@@ -120,7 +125,7 @@ async def login(
     }
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
     """Refresh access token using refresh token."""
     auth_service = get_auth_service()
     
@@ -134,9 +139,8 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
         )
     
     # Check if session exists
-    session = db.query(UserSession).filter(
-        UserSession.refresh_token == refresh_token
-    ).first()
+    result = await db.execute(select(UserSession).where(UserSession.refresh_token == refresh_token))
+    session = result.scalar_one_or_none()
     
     if not session or session.expires_at < datetime.utcnow():
         raise HTTPException(
@@ -161,7 +165,7 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 async def logout(
     access_token: str,
     current_user: User = Depends(require_auth),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Logout and invalidate tokens."""
     auth_service = get_auth_service()
@@ -170,8 +174,8 @@ async def logout(
     auth_service.blacklist_token(access_token)
     
     # Delete all user sessions
-    db.query(UserSession).filter(UserSession.user_id == current_user.id).delete()
-    db.commit()
+    await db.execute(delete(UserSession).where(UserSession.user_id == current_user.id))
+    await db.commit()
     
     return {"message": "Successfully logged out"}
 
@@ -185,7 +189,7 @@ async def change_password(
     current_password: str,
     new_password: str,
     current_user: User = Depends(require_auth),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Change user password."""
     auth_service = get_auth_service()
@@ -206,6 +210,6 @@ async def change_password(
     
     # Update password
     current_user.hashed_password = auth_service.get_password_hash(new_password)
-    db.commit()
+    await db.commit()
     
     return {"message": "Password changed successfully"}

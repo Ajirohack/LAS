@@ -5,6 +5,10 @@ class ProviderFactory:
     """Factory for creating LLM provider instances."""
     
     _providers: Dict[str, str] = {
+        # LiteLLM - Unified gateway to 100+ providers
+        "litellm": "sources.providers.litellm_provider.LiteLLMProvider",
+        
+        # Individual providers (can also be accessed via LiteLLM)
         "ollama": "sources.providers.ollama_provider.OllamaProvider",
         "openrouter": "sources.providers.openrouter_provider.OpenRouterProvider",
         "huggingface": "sources.providers.huggingface_provider.HuggingFaceProvider",

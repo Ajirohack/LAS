@@ -1,7 +1,11 @@
 from typing import Literal
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
-from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
+try:
+    from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
+except ImportError:
+    # Fallback or stub if not available
+    JsonOutputFunctionsParser = None
+
 from services.llm_service import get_llm_service
 from config.settings import settings
 from .state import GraphState
@@ -54,12 +58,21 @@ class SupervisorAgent:
             ]
         ).partial(options=str(options), members=", ".join(members))
 
-        if hasattr(self.llm, "bind_functions"):
-            self.chain = (
-                prompt
-                | self.llm.bind_functions(functions=[function_def], function_call="route")
-                | JsonOutputFunctionsParser()
-            )
+        if hasattr(self.llm, "bind_functions") and JsonOutputFunctionsParser:
+            try:
+                self.chain = (
+                    prompt
+                    | self.llm.bind_functions(functions=[function_def], function_call="route")
+                    | JsonOutputFunctionsParser()
+                )
+            except Exception:
+                # Fallback if bind_functions fails
+                from langchain_core.output_parsers import JsonOutputParser
+                self.chain = (
+                    prompt
+                    | self.llm
+                    | JsonOutputParser()
+                )
         else:
             from langchain_core.output_parsers import JsonOutputParser
             self.chain = (

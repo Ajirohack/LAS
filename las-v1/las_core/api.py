@@ -4,17 +4,11 @@ import os, sys
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from sources.logger import Logger
 from services.interaction_service import get_interaction_service
 from routers import query, stream, models, preferences, ollama_admin
 from config.settings import settings
-
-# Initialize database
-from database.models import init_db
-
-init_db()
 
 app = FastAPI(title="LAS API", description="Local Agentic System API", version="0.1.0")
 logger = Logger("api.log")
@@ -40,6 +34,9 @@ app.middleware("http")(api_key_middleware)
 @app.on_event("startup")
 async def _wire_services_on_startup():
     try:
+        from services.db.postgres import init_db as init_pg_db
+
+        await init_pg_db()
         query.set_interaction_service(get_interaction_service())
         logger.info("Interaction service wired to query router")
     except Exception as e:
@@ -135,6 +132,15 @@ try:
 except Exception as e:
     logger.error(f"HuggingFace router load failed: {e}")
 
+# LiteLLM - Unified LLM gateway (100+ providers)
+try:
+    from routers import litellm_router
+
+    v1_router.include_router(litellm_router.router, tags=["litellm", "llm", "ai"])
+    logger.info("LiteLLM router loaded - unified access to 100+ LLM providers")
+except Exception as e:
+    logger.error(f"LiteLLM router load failed: {e}")
+
 # Mount v1 router under /api
 app.include_router(v1_router, prefix="/api")
 
@@ -145,7 +151,70 @@ app.include_router(v1_router, prefix="/api")
 @app.get("/health")
 async def health_check():
     logger.info("Health check endpoint called")
-    return {"status": "healthy", "version": "0.1.0", "api_version": "v1"}
+    components = {}
+    try:
+        from services.llm_service import get_llm_service
+
+        llm = get_llm_service()
+        provider = llm.get_provider()
+        try:
+            models_list = provider.list_models()
+        except Exception:
+            models_list = []
+        components["provider"] = {"ok": provider is not None, "models": models_list}
+    except Exception as e:
+        components["provider"] = {"ok": False, "error": str(e)}
+
+    try:
+        from services.db.postgres import engine as pg_engine
+
+        async with pg_engine.begin() as _conn:
+            pass
+        components["db_postgres"] = {"ok": True}
+    except Exception as e:
+        components["db_postgres"] = {"ok": False, "error": str(e)}
+
+    try:
+        from services.rag_service import get_rag_service
+
+        rag = get_rag_service()
+        rag.client.get_collections()
+        components["qdrant"] = {"ok": True}
+    except Exception as e:
+        components["qdrant"] = {"ok": False, "error": str(e)}
+
+    try:
+        import os
+        import httpx
+
+        base = os.getenv("SEARXNG_BASE_URL") or getattr(
+            settings, "searxng_base_url", None
+        )
+        if base:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                resp = await client.get(base)
+                components["searxng"] = {"ok": resp.status_code == 200}
+        else:
+            components["searxng"] = {"ok": False, "error": "SEARXNG_BASE_URL not set"}
+    except Exception as e:
+        components["searxng"] = {"ok": False, "error": str(e)}
+
+    overall_ok = all(v.get("ok") for v in components.values()) if components else True
+    return {
+        "status": "healthy" if overall_ok else "degraded",
+        "version": "0.1.0",
+        "api_version": "v1",
+        "components": components,
+    }
+
+
+from services.tool_service import get_tool_service
+
+
+@app.get("/api/v1/tools/commands")
+async def list_tool_commands():
+    svc = get_tool_service()
+    return svc.get_available_commands()
 
 
 from fastapi.openapi.utils import get_openapi

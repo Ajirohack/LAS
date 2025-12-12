@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch, AsyncMock
 from api import app
+import os
 
 
 class TestQueryRouter:
@@ -17,9 +18,43 @@ class TestQueryRouter:
     
     def test_health_endpoint(self, client):
         """Test health check endpoint."""
-        response = client.get("/health")
-        assert response.status_code == 200
-        assert response.json()["status"] == "healthy"
+        with patch('services.llm_service.get_llm_service') as mock_llm_svc, \
+             patch('services.db.postgres.engine') as mock_engine, \
+             patch('services.rag_service.get_rag_service') as mock_rag, \
+             patch('httpx.AsyncClient') as mock_httpx:
+            
+            # Mock LLM
+            mock_provider = Mock()
+            mock_provider.list_models.return_value = ["model1"]
+            mock_llm_svc.return_value.get_provider.return_value = mock_provider
+            
+            # Mock DB
+            mock_conn = AsyncMock()
+            # engine.begin() returns a context manager
+            mock_cm = AsyncMock()
+            mock_cm.__aenter__.return_value = mock_conn
+            mock_cm.__aexit__.return_value = None
+            mock_engine.begin.return_value = mock_cm
+            
+            # Mock RAG
+            mock_rag.return_value.client.get_collections.return_value = []
+            
+            # Mock SearxNG
+            mock_resp = Mock()
+            mock_resp.status_code = 200
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get.return_value = mock_resp
+            
+            mock_httpx_cm = AsyncMock()
+            mock_httpx_cm.__aenter__.return_value = mock_client_instance
+            mock_httpx_cm.__aexit__.return_value = None
+            mock_httpx.return_value = mock_httpx_cm
+            
+            # Set env var for SearxNG check to trigger
+            with patch.dict(os.environ, {'SEARXNG_BASE_URL': 'http://localhost'}):
+                response = client.get("/health")
+                assert response.status_code == 200
+                assert response.json()["status"] == "healthy"
     
     def test_query_endpoint_without_auth(self, client):
         """Test query endpoint rejects requests without API key."""
@@ -87,6 +122,11 @@ class TestSecurityMiddleware:
     
     def test_public_endpoint_no_auth(self, client):
         """Test public endpoints don't require auth."""
+        # health check should pass without auth if it was mocked to return 200 (which it's not here unless we mock it globally or use different endpoint)
+        # But wait, health check logic is in API router.
+        # This test relies on existing behavior. Health check calls external services.
+        # If services are down, it returns 200 'degraded'. That IS 200.
+        pass # Skipping modifying this test, 'degraded' (200 OK) is still 200 OK.
         response = client.get("/health")
         assert response.status_code == 200
     
@@ -115,7 +155,6 @@ class TestSecurityMiddleware:
             
             # Should not be 403 (may be 500 due to mocking)
             assert response.status_code != 403
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

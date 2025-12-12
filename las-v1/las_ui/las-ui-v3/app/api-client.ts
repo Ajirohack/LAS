@@ -21,7 +21,7 @@ class LASApiClient {
     private baseURL: string;
     private token: string | null = null;
 
-    constructor(baseURL: string = 'http://localhost:8080/api/v1') {
+    constructor(baseURL: string = '/api/v1') {
         this.baseURL = baseURL;
         this.client = axios.create({
             baseURL: this.baseURL,
@@ -57,6 +57,18 @@ class LASApiClient {
             email,
             password
         });
+        return response.data;
+    }
+
+    // --- Plugins ---
+
+    async listPlugins() {
+        const response = await this.client.get('/plugins');
+        return response.data.plugins || [];
+    }
+
+    async loadPlugin(name: string) {
+        const response = await this.client.post(`/plugins/load/${name}`);
         return response.data;
     }
 

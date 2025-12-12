@@ -1,0 +1,37 @@
+name: Docker Build
+
+on:
+    push:
+        branches: [main, master]
+    pull_request:
+        branches: [main, master]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build Backend
+              uses: docker/build-push-action@v5
+              with:
+                  context: ./las_core
+                  file: ./las_core/Dockerfile
+                  push: false
+                  tags: las-backend:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            - name: Build Frontend
+              uses: docker/build-push-action@v5
+              with:
+                  context: ./las_ui/las-ui-v3
+                  file: ./las_ui/las-ui-v3/Dockerfile
+                  push: false
+                  tags: las-frontend:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max

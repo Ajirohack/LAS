@@ -78,7 +78,7 @@ services:
   # LAS Frontend (Next.js)
   frontend:
     build:
-      context: ../las_ui/las-ui-v2
+      context: ../las_ui/las-ui-v3
       dockerfile: Dockerfile
     container_name: las-frontend
     restart: unless-stopped

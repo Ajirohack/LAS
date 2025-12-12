@@ -3,8 +3,16 @@ from typing import List, Dict, Any
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from langchain_community.embeddings import OllamaEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.docstore.document import Document
+try:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+except ImportError:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+try:
+    from langchain.docstore.document import Document
+except ImportError:
+    from langchain_core.documents import Document
+
 from config.settings import settings
 from sources.logger import Logger
 import uuid

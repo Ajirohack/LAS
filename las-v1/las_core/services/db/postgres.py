@@ -20,9 +20,8 @@ async def get_db():
 async def init_db():
     try:
         async with engine.begin() as conn:
-            # Here we would import models and create tables
-            # await conn.run_sync(Base.metadata.create_all)
-            pass
+            from database.models import Base
+            await conn.run_sync(Base.metadata.create_all)
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")

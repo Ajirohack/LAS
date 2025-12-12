@@ -5,8 +5,15 @@ import os
 import sys
 import json
 from typing import List, Tuple, Type, Dict
-import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+try:
+    import torch
+    from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+    torch = None
+    AutoTokenizer = None
+    AutoModelForSeq2SeqLM = None
 import configparser
 
 from sources.utility import timer_decorator, pretty_print, animate_thinking
@@ -40,8 +47,11 @@ class Memory():
         self.device = self.get_cuda_device()
         self.memory_compression = memory_compression
         self.model_provider = model_provider
-        if self.memory_compression:
+        if self.memory_compression and ML_AVAILABLE:
             self.download_model()
+        elif self.memory_compression and not ML_AVAILABLE:
+            self.logger.warning("Memory compression enabled but torch/transformers not found. Disabling.")
+            self.memory_compression = False
 
     def get_ideal_ctx(self, model_name: str) -> int | None:
         """
@@ -68,6 +78,10 @@ class Memory():
     
     def download_model(self):
         """Download the model if not already downloaded."""
+        if not ML_AVAILABLE:
+             self.logger.warning("Cannot download ID: ML libraries missing.")
+             return
+             
         animate_thinking("Loading memory compression model...", color="status")
         self.tokenizer = AutoTokenizer.from_pretrained("pszemraj/led-base-book-summary")
         self.model = AutoModelForSeq2SeqLM.from_pretrained("pszemraj/led-base-book-summary")
@@ -193,6 +207,9 @@ class Memory():
         return self.memory
 
     def get_cuda_device(self) -> str:
+        if not ML_AVAILABLE or torch is None:
+            return "cpu"
+            
         if torch.backends.mps.is_available():
             return "mps"
         elif torch.cuda.is_available():

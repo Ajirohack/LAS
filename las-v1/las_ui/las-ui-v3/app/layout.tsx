@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 export const metadata: Metadata = {
   title: "LAS - Local Agent System",
   description: "The Live Command Center for AI Agents",
+  manifest: "/manifest.json",
   icons: {
     icon: "/brand/symbol.svg",
   },

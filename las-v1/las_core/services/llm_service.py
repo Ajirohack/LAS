@@ -41,9 +41,13 @@ class LLMService:
         return self.provider
 
     def get_available_models(self, provider_name: str = None):
+        if self.provider is None:
+            self.get_provider()
         return self.provider.list_models(provider_name)
 
     def get_langchain_llm(self):
+        if self.provider is None:
+            self.get_provider()
         return self.provider.get_langchain_llm()
 
 def get_llm_service():

@@ -1,7 +1,14 @@
 import axios, { AxiosInstance } from 'axios';
+import { Readable } from 'stream';
 
 export interface QueryResponse {
     answer: string;
+    [key: string]: any;
+}
+
+export interface ChatMessage {
+    role: string;
+    content: string;
     [key: string]: any;
 }
 
@@ -38,15 +45,19 @@ export interface Plugin {
 export class LASClient {
     private client: AxiosInstance;
 
-    constructor(baseURL: string = 'http://localhost:7777') {
+    constructor(baseURL: string = 'http://localhost:7777', apiKey?: string) {
         this.client = axios.create({
             baseURL: baseURL.replace(/\/$/, ''),
             headers: {
                 'Content-Type': 'application/json',
+                ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
             },
         });
     }
 
+    /**
+     * Legacy Query Endpoint
+     */
     async query(
         text: string,
         provider?: string,
@@ -60,9 +71,49 @@ export class LASClient {
         return response.data;
     }
 
+    /**
+     * Chat Completion (LiteLLM / OpenAI compatible)
+     * Supports streaming if `stream: true` is passed in options.
+     */
+    async chat(
+        messages: ChatMessage[],
+        model: string = 'gpt-3.5-turbo',
+        options: { stream?: boolean;[key: string]: any } = {}
+    ): Promise<any | Readable> {
+        const payload = {
+            messages,
+            model,
+            ...options
+        };
+
+        const url = '/api/v1/litellm/chat/completions';
+
+        if (options.stream) {
+            const response = await this.client.post(url, payload, {
+                responseType: 'stream'
+            });
+            return response.data; // Returns a Readable stream in Node environment
+        } else {
+            const response = await this.client.post(url, payload);
+            return response.data;
+        }
+    }
+
+    async listModels(): Promise<string[]> {
+        const response = await this.client.get('/api/v1/litellm/models');
+        return response.data.models;
+    }
+
+    async listProviders(): Promise<string[]> {
+        const response = await this.client.get('/api/v1/litellm/providers');
+        return response.data.providers;
+    }
+
+    // --- Memory & Skills ---
+
     async listSkills(): Promise<string[]> {
         const response = await this.client.get('/api/memory/skills');
-        return response.data.skills;
+        return response.data.skills || [];
     }
 
     async getSkill(name: string): Promise<Skill> {
@@ -75,7 +126,7 @@ export class LASClient {
         if (taskType) params.task_type = taskType;
 
         const response = await this.client.get('/api/memory/reflections', { params });
-        return response.data.reflections;
+        return response.data.reflections || [];
     }
 
     async getLessons(taskDescription: string, limit: number = 5): Promise<string[]> {
@@ -83,8 +134,10 @@ export class LASClient {
             `/api/memory/lessons/${encodeURIComponent(taskDescription)}`,
             { params: { limit } }
         );
-        return response.data.lessons;
+        return response.data.lessons || [];
     }
+
+    // --- Voice & Vision ---
 
     async transcribe(
         audioFile: Buffer | Blob,
@@ -92,7 +145,16 @@ export class LASClient {
         modelSize: string = 'base'
     ): Promise<TranscriptionResult> {
         const formData = new FormData();
-        formData.append('file', audioFile);
+        // Check if Buffer (Node) or Blob (Browser) - simplistic check
+        if (typeof Blob !== 'undefined' && audioFile instanceof Blob) {
+            formData.append('file', audioFile);
+        } else {
+            // Node environment usually requires specific form-data handling or just buffers if supported by axios/backend
+            // Assuming Node environment usage with form-data library might be needed if using 'FormData' global
+            // For simplicity, passing as blob/file object is assumed handled by environment
+            formData.append('file', new Blob([audioFile]));
+        }
+
         formData.append('model_size', modelSize);
         if (language) formData.append('language', language);
 
@@ -118,7 +180,11 @@ export class LASClient {
 
     async analyzeImage(imageFile: Buffer | Blob, prompt: string = 'Describe this image'): Promise<string> {
         const formData = new FormData();
-        formData.append('file', imageFile);
+        if (typeof Blob !== 'undefined' && imageFile instanceof Blob) {
+            formData.append('file', imageFile);
+        } else {
+            formData.append('file', new Blob([imageFile]));
+        }
         formData.append('prompt', prompt);
 
         const response = await this.client.post('/api/voice/vision/analyze', formData, {
@@ -127,9 +193,11 @@ export class LASClient {
         return response.data.analysis;
     }
 
+    // --- Plugins & Tools ---
+
     async listPlugins(): Promise<Plugin[]> {
         const response = await this.client.get('/api/plugins');
-        return response.data.plugins;
+        return response.data.plugins || [];
     }
 
     async loadPlugin(name: string): Promise<{ status: string; plugin: string }> {

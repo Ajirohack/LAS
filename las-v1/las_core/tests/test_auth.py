@@ -4,23 +4,12 @@ Test suite for authentication system.
 
 import pytest
 from fastapi.testclient import TestClient
-from database.models import Base, engine, User
+from database.models import Base, User
 from services.auth_service import get_auth_service
 from sqlalchemy.orm import Session
 
-@pytest.fixture(scope="module")
-def test_client():
-    """Create test client."""
-    from api import app
-    
-    # Create tables
-    Base.metadata.create_all(bind=engine)
-    
-    client = TestClient(app)
-    yield client
-    
-    # Cleanup
-    Base.metadata.drop_all(bind=engine)
+# Removed local test_client fixture to use the one from conftest.py
+# Removed engine import as well.
 
 @pytest.fixture
 def auth_service():
