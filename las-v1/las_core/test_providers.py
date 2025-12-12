@@ -12,10 +12,18 @@ Tests:
 import os
 import sys
 
-# Set API keys
-os.environ["OLLAMA_API_KEY"] = "8e25f62a1afb49bfa57b20ede8270e85.j1l7L7JyauQIY6qLoePLcJc1"
-os.environ["OPENROUTER_API_KEY"] = "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"
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAgvr-fJBl4Ra4B3Wjom7-H7Idsh1SMKls"
+# Load API keys from environment variables (DO NOT hardcode in repo)
+# Set these in your environment before running tests:
+# export OLLAMA_API_KEY="your_key_here"
+# export OPENROUTER_API_KEY="your_key_here"
+# export GOOGLE_API_KEY="your_key_here"
+
+if not os.getenv("OLLAMA_API_KEY"):
+    print("⚠️  Warning: OLLAMA_API_KEY not set")
+if not os.getenv("OPENROUTER_API_KEY"):
+    print("⚠️  Warning: OPENROUTER_API_KEY not set")
+if not os.getenv("GOOGLE_API_KEY"):
+    print("⚠️  Warning: GOOGLE_API_KEY not set")
 
 from sources.provider_factory import ProviderFactory
 from sources.providers.base_provider import ProviderConfig
